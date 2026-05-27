@@ -170,3 +170,39 @@ test('POST /events rejects invalid date strings', async () => {
       .catch(() => {});
   }
 });
+
+test('POST /events rejects participant users', async () => {
+  const participant = await prisma.user.create({
+    data: {
+      name: 'Event Participant Test',
+      email: `event-participant-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'PARTICIPANTE',
+    },
+  });
+
+  const title = `Participant Event ${Date.now()}`;
+
+  try {
+    const res = await request(app).post('/events').send({
+      title,
+      description: 'Evento criado por participante',
+      startDate: '2026-05-22',
+      endDate: '2026-05-25',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: participant.id,
+      status: 'CRIANDO',
+    });
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error, 'Apenas ADMIN pode criar eventos.');
+  } finally {
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: participant.id } })
+      .catch(() => {});
+  }
+});
