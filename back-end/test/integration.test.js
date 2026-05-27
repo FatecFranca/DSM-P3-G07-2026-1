@@ -134,3 +134,39 @@ test('POST /events creates an event and GET /events/:id returns it', async () =>
       .catch(() => {});
   }
 });
+
+test('POST /events rejects invalid date strings', async () => {
+  const adminUser = await prisma.user.create({
+    data: {
+      name: 'Event Admin Invalid Date Test',
+      email: `event-admin-invalid-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'ADMIN',
+    },
+  });
+
+  const title = `Invalid Event ${Date.now()}`;
+
+  try {
+    const res = await request(app).post('/events').send({
+      title,
+      description: 'Evento Acadêmico',
+      startDate: '2026-05-22',
+      endDate: 'not-a-date',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: adminUser.id,
+      status: 'CRIANDO',
+    });
+
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, 'Data inválida em endDate.');
+  } finally {
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: adminUser.id } })
+      .catch(() => {});
+  }
+});
