@@ -6,6 +6,7 @@ import {
 } from '../services/mongoAggregationService.js';
 
 function parseRequiredDate(fieldName, value) {
+  // Aeita  YYYY-MM-DD (interpreta as UTC midnight) ou full ISO datetime
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [year, month, day] = value.split('-').map(Number);
     const parsedDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
