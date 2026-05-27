@@ -266,3 +266,283 @@ test('DELETE /speakers/:id rejects malformed ids', async () => {
   assert.equal(res.status, 400);
   assert.equal(res.body.error, 'ID inválido em speakerId.');
 });
+
+test('POST /events/:eventId/sessions accepts date-only sessionDate payloads', async () => {
+  const adminUser = await prisma.user.create({
+    data: {
+      name: 'Session Admin Test',
+      email: `session-admin-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'ADMIN',
+    },
+  });
+
+  const title = `Session Event ${Date.now()}`;
+  let eventId;
+
+  try {
+    const eventRes = await request(app).post('/events').send({
+      title,
+      description: 'Evento Acadêmico',
+      startDate: '2026-05-22',
+      endDate: '2026-05-25',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: adminUser.id,
+      status: 'CRIANDO',
+    });
+    assert.equal(eventRes.status, 201);
+    eventId = eventRes.body.id;
+
+    const sessionRes = await request(app)
+      .post(`/events/${eventId}/sessions`)
+      .send({
+        sessionDate: '2026-05-23',
+        startTime: '16:00',
+        endTime: '18:00',
+        room: 'Sala 10',
+      });
+
+    assert.equal(sessionRes.status, 201);
+    assert.equal(sessionRes.body.sessionDate, '2026-05-23T00:00:00.000Z');
+    assert.equal(sessionRes.body.room, 'Sala 10');
+  } finally {
+    if (eventId) {
+      await prisma.eventSession
+        .deleteMany({ where: { eventId } })
+        .catch(() => {});
+    }
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: adminUser.id } })
+      .catch(() => {});
+  }
+});
+
+test('POST /events/:eventId/sessions rejects invalid sessionDate strings', async () => {
+  const adminUser = await prisma.user.create({
+    data: {
+      name: 'Session Invalid Date Admin Test',
+      email: `session-invalid-admin-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'ADMIN',
+    },
+  });
+
+  const title = `Session Invalid Event ${Date.now()}`;
+  let eventId;
+
+  try {
+    const eventRes = await request(app).post('/events').send({
+      title,
+      description: 'Evento Acadêmico',
+      startDate: '2026-05-22',
+      endDate: '2026-05-25',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: adminUser.id,
+      status: 'CRIANDO',
+    });
+    assert.equal(eventRes.status, 201);
+    eventId = eventRes.body.id;
+
+    const sessionRes = await request(app)
+      .post(`/events/${eventId}/sessions`)
+      .send({
+        sessionDate: 'not-a-date',
+        startTime: '16:00',
+        endTime: '18:00',
+        room: 'Sala 10',
+      });
+
+    assert.equal(sessionRes.status, 400);
+    assert.equal(sessionRes.body.error, 'Data inválida em sessionDate.');
+  } finally {
+    if (eventId) {
+      await prisma.eventSession
+        .deleteMany({ where: { eventId } })
+        .catch(() => {});
+    }
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: adminUser.id } })
+      .catch(() => {});
+  }
+});
+
+test('POST /events/:eventId/sessions rejects session dates outside event range', async () => {
+  const adminUser = await prisma.user.create({
+    data: {
+      name: 'Session Range Admin Test',
+      email: `session-range-admin-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'ADMIN',
+    },
+  });
+
+  const title = `Session Range Event ${Date.now()}`;
+  let eventId;
+
+  try {
+    const eventRes = await request(app).post('/events').send({
+      title,
+      description: 'Evento Acadêmico',
+      startDate: '2026-05-22',
+      endDate: '2026-05-25',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: adminUser.id,
+      status: 'CRIANDO',
+    });
+    assert.equal(eventRes.status, 201);
+    eventId = eventRes.body.id;
+
+    const sessionRes = await request(app)
+      .post(`/events/${eventId}/sessions`)
+      .send({
+        sessionDate: '2026-05-26',
+        startTime: '16:00',
+        endTime: '18:00',
+        room: 'Sala 10',
+      });
+
+    assert.equal(sessionRes.status, 400);
+    assert.equal(
+      sessionRes.body.error,
+      'Data da sessão deve estar dentro do período do evento.',
+    );
+  } finally {
+    if (eventId) {
+      await prisma.eventSession
+        .deleteMany({ where: { eventId } })
+        .catch(() => {});
+    }
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: adminUser.id } })
+      .catch(() => {});
+  }
+});
+
+test('POST /events/:eventId/sessions accepts session dates on event boundaries', async () => {
+  const adminUser = await prisma.user.create({
+    data: {
+      name: 'Session Boundary Admin Test',
+      email: `session-boundary-admin-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'ADMIN',
+    },
+  });
+
+  const title = `Session Boundary Event ${Date.now()}`;
+  let eventId;
+
+  try {
+    const eventRes = await request(app).post('/events').send({
+      title,
+      description: 'Evento para testar datas-limite',
+      startDate: '2026-07-19',
+      endDate: '2026-07-21',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: adminUser.id,
+      status: 'CRIANDO',
+    });
+    assert.equal(eventRes.status, 201);
+    eventId = eventRes.body.id;
+
+    const boundaryDates = ['2026-07-19', '2026-07-21'];
+
+    for (const sessionDate of boundaryDates) {
+      const sessionRes = await request(app)
+        .post(`/events/${eventId}/sessions`)
+        .send({
+          sessionDate,
+          startTime: '16:00',
+          endTime: '18:00',
+          room: 'Sala 10',
+        });
+
+      assert.equal(sessionRes.status, 201);
+      assert.equal(sessionRes.body.sessionDate.slice(0, 10), sessionDate);
+    }
+  } finally {
+    if (eventId) {
+      await prisma.eventSession
+        .deleteMany({ where: { eventId } })
+        .catch(() => {});
+    }
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: adminUser.id } })
+      .catch(() => {});
+  }
+});
+
+test('DELETE /events/:eventId/sessions returns a client message', async () => {
+  const adminUser = await prisma.user.create({
+    data: {
+      name: 'Session Delete Admin Test',
+      email: `session-delete-admin-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'ADMIN',
+    },
+  });
+
+  const title = `Session Delete Event ${Date.now()}`;
+  let eventId;
+  let sessionId;
+
+  try {
+    const eventRes = await request(app).post('/events').send({
+      title,
+      description: 'Evento para exclusão de sessão',
+      startDate: '2026-05-22',
+      endDate: '2026-05-25',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: adminUser.id,
+      status: 'CRIANDO',
+    });
+    assert.equal(eventRes.status, 201);
+    eventId = eventRes.body.id;
+
+    const sessionRes = await request(app)
+      .post(`/events/${eventId}/sessions`)
+      .send({
+        sessionDate: '2026-05-23',
+        startTime: '16:00',
+        endTime: '18:00',
+        room: 'Sala 10',
+      });
+    assert.equal(sessionRes.status, 201);
+    sessionId = sessionRes.body.id;
+
+    const deleteRes = await request(app).delete(
+      `/events/${eventId}/sessions/${sessionId}`,
+    );
+
+    assert.equal(deleteRes.status, 200);
+    assert.equal(deleteRes.body.message, 'Sessão deletada com sucesso.');
+  } finally {
+    if (sessionId) {
+      await prisma.eventSession
+        .deleteMany({ where: { id: sessionId } })
+        .catch(() => {});
+    }
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: adminUser.id } })
+      .catch(() => {});
+  }
+});
