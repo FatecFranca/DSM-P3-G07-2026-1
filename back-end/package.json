@@ -8,10 +8,12 @@
         "start": "node ./src/bin/server.js",
         "prisma:generate": "prisma generate",
         "prisma:studio": "prisma studio",
-        "test:unit": "node --test --test-concurrency=1",
-        "test": "npm run test:unit",
-        "test:integration": "mocha --exit test/integration.test.js test/attendance.test.js",
-        "test:all": "npm run test && npm run test:integration"
+        "seed": "node ./scripts/seed.js",
+        "dedupe:registrations": "node ./scripts/dedupeRegistrations.js",
+        "dedupe:unique": "node ./scripts/dedupeUniqueKeys.js",
+        "smoke": "node ./scripts/smokeTests.js",
+        "test": "mocha --exit 'test/**/*.test.js'",
+        "test:watch": "mocha --watch --exit 'test/**/*.test.js'"
     },
     "dependencies": {
         "@prisma/client": "^6.12.0",
