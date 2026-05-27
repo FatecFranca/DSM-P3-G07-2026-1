@@ -1,0 +1,136 @@
+import test from 'node:test';
+import assert from 'assert';
+import request from 'supertest';
+import bcrypt from 'bcryptjs';
+import app from '../src/app.js';
+import { prisma } from '../src/database/client.js';
+
+test('GET /events returns 200', async () => {
+  const res = await request(app).get('/events');
+  assert.equal(res.status, 200);
+});
+
+test('Create, update and delete user lifecycle', async () => {
+  const email = `user-${Date.now()}@example.com`;
+  const plainPassword = 'integration-user-password';
+  const createRes = await request(app).post('/users').send({
+    name: 'Integration User',
+    email,
+    passwordHash: plainPassword,
+    role: 'ADMIN',
+  });
+  assert.equal(createRes.status, 201);
+  const user = createRes.body;
+  assert.ok(user.id, 'user id present');
+  assert.equal(user.passwordHash, undefined);
+
+  const storedUser = await prisma.user.findUnique({ where: { id: user.id } });
+  assert.ok(storedUser, 'stored user present');
+  assert.notEqual(storedUser.passwordHash, plainPassword);
+  assert.equal(
+    await bcrypt.compare(plainPassword, storedUser.passwordHash),
+    true,
+  );
+
+  const updateRes = await request(app)
+    .put(`/users/${user.id}`)
+    .send({ phone: '(11) 98888-7777' });
+  assert.equal(updateRes.status, 200);
+
+  const delRes = await request(app).delete(`/users/${user.id}`);
+  assert.equal(delRes.status, 200);
+});
+
+test('Create and delete participant lifecycle through users', async () => {
+  const email = `test-${Date.now()}@example.com`;
+  const createRes = await request(app).post('/users').send({
+    name: 'Integration Test',
+    email,
+    passwordHash: 'integration-test-password',
+    role: 'PARTICIPANTE',
+  });
+  assert.equal(createRes.status, 201);
+  const participant = createRes.body;
+  assert.ok(participant.id, 'participant id present');
+
+  const delRes = await request(app).delete(`/users/${participant.id}`);
+  assert.equal(delRes.status, 200);
+});
+
+test('POST /auth/login issues cookies and /auth/me returns the authenticated user', async () => {
+  const email = `auth-${Date.now()}@example.com`;
+  const password = 'auth-test-password';
+
+  try {
+    const createRes = await request(app).post('/users').send({
+      name: 'Auth Integration User',
+      email,
+      passwordHash: password,
+      role: 'PARTICIPANTE',
+    });
+    assert.equal(createRes.status, 201);
+
+    const agent = request.agent(app);
+
+    const loginRes = await agent.post('/auth/login').send({ email, password });
+    assert.equal(loginRes.status, 200);
+    assert.equal(loginRes.body.user.email, email);
+    assert.equal(loginRes.body.user.role, 'PARTICIPANTE');
+
+    const meRes = await agent.get('/auth/me');
+    assert.equal(meRes.status, 200);
+    assert.equal(meRes.body.user.email, email);
+
+    const logoutRes = await agent.post('/auth/logout');
+    assert.equal(logoutRes.status, 200);
+
+    const afterLogoutRes = await agent.get('/auth/me');
+    assert.equal(afterLogoutRes.status, 401);
+  } finally {
+    await prisma.user.deleteMany({ where: { email } }).catch(() => {});
+  }
+});
+
+test('POST /events creates an event and GET /events/:id returns it', async () => {
+  const adminUser = await prisma.user.create({
+    data: {
+      name: 'Event Admin Test',
+      email: `event-admin-${Date.now()}@example.com`,
+      passwordHash: '',
+      role: 'ADMIN',
+    },
+  });
+
+  const title = `Fatec TechWeek ${Date.now()}`;
+  let eventId;
+
+  try {
+    const res = await request(app).post('/events').send({
+      title,
+      description: 'Evento Acadêmico',
+      startDate: '2026-05-22T00:00:00.000Z',
+      endDate: '2026-05-25T00:00:00.000Z',
+      location: 'Auditório',
+      type: 'Palestra',
+      capacity: 100,
+      certificateRequiredPercent: 75,
+      createdByAdminId: adminUser.id,
+      status: 'CRIANDO',
+    });
+
+    assert.equal(res.status, 201);
+    assert.equal(res.body.title, title);
+
+    eventId = res.body.id;
+
+    const getRes = await request(app).get(`/events/${eventId}`);
+
+    assert.equal(getRes.status, 200);
+    assert.equal(getRes.body.title, title);
+  } finally {
+    await prisma.event.deleteMany({ where: { title } }).catch(() => {});
+    await prisma.user
+      .deleteMany({ where: { id: adminUser.id } })
+      .catch(() => {});
+  }
+});
