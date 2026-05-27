@@ -223,3 +223,34 @@ test('GET /speakers/:id returns 404 for a valid but missing id', async () => {
   assert.equal(res.status, 404);
   assert.equal(res.body.error, 'Palestrante não encontrado.');
 });
+
+test('Create, update and delete speaker lifecycle', async () => {
+  const email = `speaker-${Date.now()}@example.com`;
+
+  try {
+    const createRes = await request(app).post('/speakers').send({
+      name: 'Integration Speaker',
+      email,
+      bio: 'Speaker integration test bio',
+      institution: 'Fatec',
+      phone: '(11) 97777-6666',
+    });
+
+    assert.equal(createRes.status, 201);
+    assert.ok(createRes.body.id, 'speaker id present');
+    assert.equal(createRes.body.email, email);
+
+    const updateRes = await request(app)
+      .put(`/speakers/${createRes.body.id}`)
+      .send({ bio: 'Updated speaker integration bio' });
+
+    assert.equal(updateRes.status, 200);
+    assert.equal(updateRes.body.bio, 'Updated speaker integration bio');
+
+    const delRes = await request(app).delete(`/speakers/${createRes.body.id}`);
+    assert.equal(delRes.status, 200);
+    assert.equal(delRes.body.message, 'Palestrante deletado com sucesso.');
+  } finally {
+    await prisma.speaker.deleteMany({ where: { email } }).catch(() => {});
+  }
+});
