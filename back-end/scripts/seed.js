@@ -1,7 +1,14 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
+const PASSWORD_HASH_ROUNDS = 10;
+
+async function hashSeedPassword(password) {
+  return bcrypt.hash(password, PASSWORD_HASH_ROUNDS);
+}
 
 const FIXTURES = {
   admin: {
@@ -112,9 +119,12 @@ async function main() {
 
   await clearSeedData();
 
+  const adminPasswordHash = await hashSeedPassword(FIXTURES.admin.passwordHash);
+
   const admin = await prisma.user.create({
     data: {
       ...FIXTURES.admin,
+      passwordHash: adminPasswordHash,
       role: 'ADMIN',
     },
   });
@@ -127,9 +137,14 @@ async function main() {
 
   const participants = [];
   for (const participantData of FIXTURES.participants) {
+    const participantPasswordHash = await hashSeedPassword(
+      participantData.passwordHash,
+    );
+
     const participant = await prisma.user.create({
       data: {
         ...participantData,
+        passwordHash: participantPasswordHash,
         role: 'PARTICIPANTE',
       },
     });
