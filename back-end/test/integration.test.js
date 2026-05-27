@@ -206,3 +206,20 @@ test('POST /events rejects participant users', async () => {
       .catch(() => {});
   }
 });
+
+test('GET /speakers returns 200', async () => {
+  const res = await request(app).get('/speakers');
+  assert.equal(res.status, 200);
+});
+
+test('GET /speakers/:id rejects malformed ids', async () => {
+  const res = await request(app).get('/speakers/6a0ce88f6c5a6baecc42755');
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'ID inválido em speakerId.');
+});
+
+test('GET /speakers/:id returns 404 for a valid but missing id', async () => {
+  const res = await request(app).get('/speakers/6a0ce88f6c5a6baecc427551');
+  assert.equal(res.status, 404);
+  assert.equal(res.body.error, 'Palestrante não encontrado.');
+});

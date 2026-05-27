@@ -7,6 +7,7 @@ import indexRouter from './routes/index.js';
 import authRouter from './routes/auth.js';
 import usersRouter from './routes/users.js';
 import eventsRouter from './routes/events.js';
+import speakersRouter from './routes/speakers.js';
 
 const app = express();
 
@@ -39,5 +40,6 @@ app.use('/', indexRouter);
 app.use('/auth', authRouter);
 app.use('/users', usersRouter);
 app.use('/events', eventsRouter);
+app.use('/speakers', speakersRouter);
 
 export default app;
