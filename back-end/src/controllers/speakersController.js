@@ -184,7 +184,6 @@ export async function updateSpeaker(req, res) {
       where: { id: speakerId },
       data,
     });
-
     res.json(normalizeMongoResponse(speaker));
   } catch (error) {
     if (isUniqueEmailViolation(error)) {
