@@ -1,227 +1,156 @@
 import { prisma } from '../database/client.js';
-import { Prisma } from '@prisma/client';
-import {
-  normalizeMongoResponse,
-  unwrapMongoAggregationBatch,
-} from '../services/mongoAggregationService.js';
+import { normalizeMongoResponse } from '../services/mongoAggregationService.js';
+import bcrypt from 'bcryptjs';
 
-function mergeUniqueIds(...lists) {
-  return [...new Set(lists.flat().filter(Boolean))];
-}
+const VALID_USER_ROLES = new Set(['ADMIN', 'PARTICIPANTE']);
+const PASSWORD_HASH_ROUNDS = 10;
 
-async function getAllEventsRaw() {
-  const events = await prisma.$runCommandRaw({
-    aggregate: 'Event',
-    pipeline: [{ $match: {} }],
-    cursor: {},
-  });
-
-  return normalizeMongoResponse(unwrapMongoAggregationBatch(events));
-}
-
-async function getLinkedEventIds(speakerId) {
-  const events = await getAllEventsRaw();
-
-  return events
-    .filter((event) => (event.speakerIds ?? []).includes(speakerId))
-    .map((event) => event.id);
-}
-
-async function syncEventLinks(speakerId, previousEventIds, nextEventIds) {
-  const removed = previousEventIds.filter(
-    (eventId) => !nextEventIds.includes(eventId),
-  );
-  const added = nextEventIds.filter(
-    (eventId) => !previousEventIds.includes(eventId),
-  );
-
-  for (const eventId of removed) {
-    await prisma.$runCommandRaw({
-      update: 'Event',
-      updates: [
-        {
-          q: { _id: { $oid: eventId } },
-          u: { $pull: { speakerIds: { $oid: speakerId } } },
-          upsert: false,
-        },
-      ],
-    });
+function isUniqueEmailViolation(error) {
+  if (!error || error.code !== 'P2002') {
+    return false;
   }
 
-  for (const eventId of added) {
-    await prisma.$runCommandRaw({
-      update: 'Event',
-      updates: [
-        {
-          q: { _id: { $oid: eventId } },
-          u: { $addToSet: { speakerIds: { $oid: speakerId } } },
-          upsert: false,
-        },
-      ],
-    });
-  }
+  const target = error.meta?.target;
+
+  return (
+    target === 'User_email_key' ||
+    (Array.isArray(target) && target.includes('email'))
+  );
 }
 
-function validateObjectId(fieldName, value) {
-  if (typeof value !== 'string' || !/^[a-fA-F0-9]{24}$/.test(value)) {
-    const error = new Error(`ID inválido em ${fieldName}.`);
+function stripPasswordHash(user) {
+  if (Array.isArray(user)) {
+    return user.map(stripPasswordHash);
+  }
+
+  if (!user || typeof user !== 'object') {
+    return user;
+  }
+
+  const { passwordHash, ...rest } = user;
+  return rest;
+}
+
+async function normalizeUserData(reqBody, { requirePasswordHash = true } = {}) {
+  const data = { ...reqBody };
+
+  if (data.role && !VALID_USER_ROLES.has(data.role)) {
+    const error = new Error('Função de usuário inválida.');
     error.statusCode = 400;
     throw error;
   }
-}
 
-function isUniqueEmailViolation(error) {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === 'P2002' &&
-    error.meta?.target?.includes('email')
-  );
-}
+  const plainPassword = data.password ?? data.passwordHash;
 
-export async function getAllSpeakers(req, res) {
-  try {
-    const [speakersResult, events] = await Promise.all([
-      prisma.$runCommandRaw({
-        aggregate: 'Speaker',
-        pipeline: [{ $match: {} }],
-        cursor: {},
-      }),
-      getAllEventsRaw(),
-    ]);
+  delete data.password;
+  delete data.passwordHash;
+  delete data.id;
 
-    const speakers = normalizeMongoResponse(
-      unwrapMongoAggregationBatch(speakersResult),
-    );
-    const eventIdsBySpeakerId = new Map();
-
-    for (const event of events) {
-      for (const speakerId of event.speakerIds ?? []) {
-        const currentIds = eventIdsBySpeakerId.get(speakerId) ?? [];
-        currentIds.push(event.id);
-        eventIdsBySpeakerId.set(speakerId, currentIds);
-      }
+  if (plainPassword !== undefined) {
+    if (typeof plainPassword !== 'string' || !plainPassword.trim()) {
+      const error = new Error('Senha inválida.');
+      error.statusCode = 400;
+      throw error;
     }
 
-    res.json(
-      speakers.map((speaker) => ({
-        ...speaker,
-        eventIds: mergeUniqueIds(
-          speaker.eventIds ?? [],
-          eventIdsBySpeakerId.get(speaker.id) ?? [],
-        ),
-      })),
-    );
+    data.passwordHash = await bcrypt.hash(plainPassword, PASSWORD_HASH_ROUNDS);
+  } else if (requirePasswordHash) {
+    const error = new Error('Senha é obrigatória.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getAllUsers(req, res) {
+  try {
+    const includeInactive = req.query.includeInactive === 'true';
+    const users = await prisma.user.findMany({
+      where: includeInactive ? undefined : { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(stripPasswordHash(normalizeMongoResponse(users)));
   } catch (error) {
-    console.error('getAllSpeakers error:', error);
-    res.status(500).json({ error: 'Erro ao buscar palestrantes.' });
+    res.status(500).json({ error: 'Erro ao buscar usuários.' });
   }
 }
 
-export async function createSpeaker(req, res) {
+export async function createUser(req, res) {
   try {
-    const speaker = await prisma.speaker.create({
-      data: req.body,
+    const user = await prisma.user.create({
+      data: await normalizeUserData(req.body, { requirePasswordHash: true }),
     });
-
-    if (Array.isArray(req.body?.eventIds) && req.body.eventIds.length > 0) {
-      await syncEventLinks(speaker.id, [], req.body.eventIds);
-    }
-
-    res.status(201).json(normalizeMongoResponse(speaker));
+    res.status(201).json(stripPasswordHash(normalizeMongoResponse(user)));
   } catch (error) {
     if (isUniqueEmailViolation(error)) {
       return res.status(409).json({ error: 'E-mail já cadastrado.' });
     }
-    res.status(400).json({ error: 'Erro ao criar palestrante.' });
+
+    const statusCode = error.statusCode || 400;
+    res.status(statusCode).json({
+      error: error.message || 'Erro ao criar usuário.',
+    });
   }
 }
 
-export async function getSpeakerById(req, res) {
+export async function getUserById(req, res) {
   try {
-    validateObjectId('speakerId', req.params.id);
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
 
-    const speaker = await prisma.speaker.findUnique({
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    res.json(stripPasswordHash(normalizeMongoResponse(user)));
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar usuário.' });
+  }
+}
+
+export async function updateUser(req, res) {
+  try {
+    const user = await prisma.user.update({
       where: { id: req.params.id },
+      data: await normalizeUserData(req.body, { requirePasswordHash: false }),
     });
-    if (!speaker)
-      return res.status(404).json({ error: 'Palestrante não encontrado.' });
-    res.json(normalizeMongoResponse(speaker));
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({
-      error: error.message || 'Erro ao buscar palestrante.',
-    });
-  }
-}
 
-export async function updateSpeaker(req, res) {
-  try {
-    validateObjectId('speakerId', req.params.id);
-
-    const data = { ...req.body };
-    const speakerId = req.params.id;
-
-    // If eventIds provided, synchronize Event.speakerIds arrays
-    if (Array.isArray(data.eventIds)) {
-      const currentLinkedEventIds = mergeUniqueIds(
-        (
-          await prisma.speaker.findUnique({
-            where: { id: speakerId },
-            select: { eventIds: true },
-          })
-        )?.eventIds ?? [],
-        await getLinkedEventIds(speakerId),
-      );
-
-      await syncEventLinks(
-        speakerId,
-        currentLinkedEventIds,
-        data.eventIds || [],
-      );
-    }
-
-    const speaker = await prisma.speaker.update({
-      where: { id: speakerId },
-      data,
-    });
-    res.json(normalizeMongoResponse(speaker));
+    res.json(stripPasswordHash(normalizeMongoResponse(user)));
   } catch (error) {
     if (isUniqueEmailViolation(error)) {
       return res.status(409).json({ error: 'E-mail já cadastrado.' });
     }
-    const statusCode = error.statusCode || 500;
+
+    const statusCode = error.statusCode || 400;
     res.status(statusCode).json({
-      error: error.message || 'Erro ao atualizar palestrante.',
+      error: error.message || 'Erro ao atualizar usuário.',
     });
   }
 }
 
-export async function deleteSpeaker(req, res) {
+export async function deleteUser(req, res) {
   try {
-    validateObjectId('speakerId', req.params.id);
-
-    const speakerId = req.params.id;
-    const speaker = await prisma.speaker.findUnique({
-      where: { id: speakerId },
-      select: { eventIds: true },
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, isActive: true },
     });
-    if (!speaker) {
-      return res.status(404).json({ error: 'Palestrante não encontrado.' });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
-    const linkedEventIds = mergeUniqueIds(
-      speaker.eventIds ?? [],
-      await getLinkedEventIds(speakerId),
-    );
+    if (!user.isActive) {
+      return res.status(409).json({ error: 'Usuário já está inativo.' });
+    }
 
-    await syncEventLinks(speakerId, linkedEventIds, []);
-
-    await prisma.speaker.delete({ where: { id: speakerId } });
-    res.status(200).json({ message: 'Palestrante deletado com sucesso.' });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({
-      error: error.message || 'Erro ao deletar palestrante.',
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { isActive: false },
     });
+
+    res.status(200).json({ message: 'Usuário desativado com sucesso.' });
+  } catch (error) {
+    res.status(400).json({ error: 'Erro ao desativar usuário.' });
   }
 }
