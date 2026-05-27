@@ -254,3 +254,15 @@ test('Create, update and delete speaker lifecycle', async () => {
     await prisma.speaker.deleteMany({ where: { email } }).catch(() => {});
   }
 });
+
+test('PUT /speakers/:id rejects malformed ids', async () => {
+  const res = await request(app).put('/speakers/6a0ce88f6c5a6baecc42755');
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'ID inválido em speakerId.');
+});
+
+test('DELETE /speakers/:id rejects malformed ids', async () => {
+  const res = await request(app).delete('/speakers/6a0ce88f6c5a6baecc42755');
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'ID inválido em speakerId.');
+});
