@@ -6,6 +6,9 @@ const ACCESS_TOKEN_SECRET =
 const REFRESH_TOKEN_SECRET =
   process.env.REFRESH_TOKEN_SECRET || 'academyflow-refresh-secret-dev';
 const ACCESS_TOKEN_TTL = '15m';
+// 12 houras em secundos (hard-coded por decisão de produto)
+// TODO: move to environment variable like process.env.REFRESH_TOKEN_TTL_SECONDS
+// in a future improvement to make this configurable without code changes.
 const REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 12;
 
 export const ACCESS_COOKIE_NAME = 'academyflow_access_token';
@@ -62,4 +65,6 @@ export function buildAuthCookieOptions(maxAgeMilliseconds) {
 }
 
 export const ACCESS_TOKEN_MAX_AGE_MS = 1000 * 60 * 15;
+// 12 hours in milliseconds (hard-coded)
+// TODO: consider reading from process.env.REFRESH_TOKEN_MAX_AGE_MS
 export const REFRESH_TOKEN_MAX_AGE_MS = 1000 * 60 * 60 * 12;
