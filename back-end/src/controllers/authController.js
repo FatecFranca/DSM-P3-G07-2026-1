@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs';
-
 import { prisma } from '../database/client.js';
 import { normalizeMongoResponse } from '../services/mongoAggregationService.js';
 import {
