@@ -1,0 +1,340 @@
+[
+    {
+        "name": "BE-01 - Inicializar API Express",
+        "desc": "Criar estrutura inicial do servidor, rotas base e middlewares.",
+        "labels": [
+            "back-end"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-02 - Integrar Prisma com MongoDB",
+        "desc": "Configurar Prisma, cliente de banco e conexao com MongoDB.",
+        "labels": [
+            "back-end",
+            "db"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-03 - Definir schema de dominio",
+        "desc": "Modelar User, Speaker, Event, EventSession, Registration, Attendance e Certificate.",
+        "labels": [
+            "back-end",
+            "db"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-04 - Implementar autenticacao",
+        "desc": "Criar login, logout, refresh e consulta do usuario autenticado.",
+        "labels": [
+            "back-end",
+            "auth"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-05 - Criar gestao de usuarios",
+        "desc": "Entregar CRUD e validacoes de usuarios.",
+        "labels": [
+            "back-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-06 - Criar gestao de eventos",
+        "desc": "Implementar rotas, controller e validacao de eventos.",
+        "labels": [
+            "back-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-07 - Criar gestao de palestrantes",
+        "desc": "Implementar CRUD e validacoes de palestrantes.",
+        "labels": [
+            "back-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-08 - Criar gestao de sessoes",
+        "desc": "Implementar rotas e controller de sessoes vinculadas a eventos.",
+        "labels": [
+            "back-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-09 - Recalcular progresso de presenca",
+        "desc": "Atualizar status e progresso das inscricoes e eventos.",
+        "labels": [
+            "back-end"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-10 - Criar gestao de inscricoes",
+        "desc": "Implementar CRUD de inscricoes com regras de negocio.",
+        "labels": [
+            "back-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-11 - Criar gestao de presenca",
+        "desc": "Implementar CRUD de presenca e validacoes por inscricao.",
+        "labels": [
+            "back-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-12 - Criar gestao de certificados",
+        "desc": "Implementar upload de PDF e CRUD de certificados.",
+        "labels": [
+            "back-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-13 - Criar testes de usuarios e eventos",
+        "desc": "Cobrir fluxos principais com testes unitarios e integracao.",
+        "labels": [
+            "back-end",
+            "testes"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-14 - Criar testes de palestrantes e sessoes",
+        "desc": "Cobrir ciclo de vida das funcionalidades de dominio.",
+        "labels": [
+            "back-end",
+            "testes"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-15 - Criar testes de inscricao e presenca",
+        "desc": "Validar regras transacionais e rejeicoes esperadas.",
+        "labels": [
+            "back-end",
+            "testes"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "BE-16 - Ajustar script de seed e smoke tests",
+        "desc": "Preparar massa de dados e verificacao rapida da API.",
+        "labels": [
+            "back-end",
+            "testes"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-01 - Inicializar Next.js",
+        "desc": "Criar estrutura do app, layout base e configuracao inicial.",
+        "labels": [
+            "front-end"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-02 - Definir tema visual e componentes",
+        "desc": "Consolidar botao, card, input, badge, skeleton e toast.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-03 - Criar integracao com API",
+        "desc": "Centralizar cliente HTTP, tipos e helpers de dominio.",
+        "labels": [
+            "front-end"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-04 - Implementar login e registro",
+        "desc": "Criar telas publicas e persistencia de sessao.",
+        "labels": [
+            "front-end",
+            "auth"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-05 - Proteger rotas com AuthGate",
+        "desc": "Bloquear acesso por papel e estado de autenticacao.",
+        "labels": [
+            "front-end",
+            "auth"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-06 - Criar shell do dashboard",
+        "desc": "Implementar header, menu lateral e area de conteudo.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-07 - Criar dashboard do admin",
+        "desc": "Montar visao inicial com cards e atalhos.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-08 - Criar CRUD de usuarios no admin",
+        "desc": "Criar listagem, formulario e edicao de usuarios.",
+        "labels": [
+            "front-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-09 - Criar CRUD de palestrantes no admin",
+        "desc": "Criar listagem, formulario e exclusao.",
+        "labels": [
+            "front-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-10 - Criar CRUD de eventos no admin",
+        "desc": "Criar listagem, formulario, edicao e exclusao.",
+        "labels": [
+            "front-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-11 - Criar CRUD de inscricoes no admin",
+        "desc": "Filtrar, editar e remover inscricoes.",
+        "labels": [
+            "front-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-12 - Criar CRUD de sessoes no admin",
+        "desc": "Gerenciar sessoes de evento com formulario dedicado.",
+        "labels": [
+            "front-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-13 - Criar CRUD de presenca no admin",
+        "desc": "Filtrar por sessao e editar presencas.",
+        "labels": [
+            "front-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-14 - Criar CRUD de certificados no admin",
+        "desc": "Emitir, filtrar e remover certificados.",
+        "labels": [
+            "front-end",
+            "crud"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-15 - Criar layout do participante",
+        "desc": "Implementar navegacao e area exclusiva do participante.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-16 - Criar dashboard do participante",
+        "desc": "Exibir progresso, certificados e eventos disponiveis.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-17 - Criar tela de eventos do participante",
+        "desc": "Permitir busca, filtro e inscricao.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-18 - Criar tela de inscricoes do participante",
+        "desc": "Exibir status, filtros e acesso ao certificado.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-19 - Criar tela de certificados do participante",
+        "desc": "Permitir consulta e download de certificados.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-20 - Criar tela de perfil do participante",
+        "desc": "Permitir atualizar dados pessoais.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-21 - Criar testes E2E",
+        "desc": "Cobrir navegacao do admin e do participante.",
+        "labels": [
+            "front-end",
+            "testes"
+        ],
+        "list": "Backlog"
+    },
+    {
+        "name": "FE-22 - Revisar UX e responsividade",
+        "desc": "Ajustar estados de carregamento, erro e telas menores.",
+        "labels": [
+            "front-end",
+            "ui"
+        ],
+        "list": "Backlog"
+    }
+]
